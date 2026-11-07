@@ -1,0 +1,22 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  call-docker:
+    uses: ./.github/workflows/build-docker.yml
+    secrets: inherit
+
+  call-terraform:
+    needs: call-docker
+    uses: ./.github/workflows/terraform.yml
+    secrets: inherit
+
+  call-deploy:
+    needs: call-terraform
+    uses: ./.github/workflows/deploy-to-ec2.yml
+    with:
+      ec2_public_ip: ${{ needs.call-terraform.outputs.ec2_public_ip }}
+    secrets: inherit
