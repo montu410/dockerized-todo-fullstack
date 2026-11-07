@@ -1,0 +1,62 @@
+services:
+
+# Backend: NodeJS + Express
+  backend:
+    image: manishjangra97/todo-app-backend:${IMAGE_TAG:-latest}
+    container_name: todo-backend
+    environment:
+      - DB_HOST=mysql-db
+      - DB_USER=${MYSQL_USER}
+      - DB_PASSWORD=${MYSQL_PASSWORD}
+      - DB_NAME=${MYSQL_DATABASE}
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    restart: unless-stopped
+    # volumes:
+    #   - ./backend:/app
+    #   - /app/node_modules
+    networks:
+      - my-sql-networks
+
+  # Frontend: ReactJS
+  frontend:
+    image: manishjangra97/todo-app-frontend:${IMAGE_TAG:-latest}
+    container_name: todo-frontend
+    ports:
+      - "80:80"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    networks:
+      - my-sql-networks
+
+  # Database: MYSQL
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - my-sql-networks
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  db_data:
+    name: db_data
+
+networks:
+  my-sql-networks:
+    driver: bridge
+    name: my-sql-networks
